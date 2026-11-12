@@ -1,0 +1,1469 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpeakUp! — Интерактивная практика английского спикинга</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        display: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    },
+                    animation: {
+                        'pulse-ring': 'pulseRing 1.5s cubic-bezier(0.24, 0, 0.38, 1) infinite',
+                        'fade-in': 'fadeIn 0.3s ease-out forwards',
+                    },
+                    keyframes: {
+                        pulseRing: {
+                            '0%': { transform: 'scale(0.95)', opacity: '0.7' },
+                            '70%': { transform: 'scale(1.3)', opacity: '0' },
+                            '100%': { transform: 'scale(1.3)', opacity: '0' },
+                        },
+                        fadeIn: {
+                            '0%': { opacity: '0', transform: 'translateY(8px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        h1, h2, h3, .font-display {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        /* Custom scrollbar for topic pills */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Audio visualizer bars */
+        .viz-bar {
+            transition: height 0.08s ease;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300 min-h-screen flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+            <!-- Brand -->
+            <div class="flex items-center gap-2.5">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center text-white shadow-md shadow-brand-500/20">
+                    <i data-lucide="mic" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <span class="font-display font-extrabold text-xl tracking-tight bg-gradient-to-r from-brand-600 to-violet-600 dark:from-brand-400 dark:to-violet-400 bg-clip-text text-transparent">SpeakUp!</span>
+                    <span class="hidden sm:inline-block text-xs font-medium text-slate-400 dark:text-slate-500 ml-2">English Speaking Lab</span>
+                </div>
+            </div>
+
+            <!-- Progress & Controls -->
+            <div class="flex items-center gap-3 sm:gap-4">
+                <!-- Progress Pill -->
+                <div class="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/90 px-3 py-1.5 rounded-full border border-slate-200/60 dark:border-slate-700/60" title="Пройдено карточек">
+                    <i data-lucide="award" class="w-4 h-4 text-amber-500"></i>
+                    <span class="text-xs sm:text-sm font-semibold" id="progressText">0 / 12</span>
+                    <div class="w-14 sm:w-20 h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden hidden xs:block">
+                        <div id="progressBar" class="h-full bg-gradient-to-r from-brand-500 to-emerald-500 transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- Theme Toggle -->
+                <button id="themeToggle" class="p-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" aria-label="Переключить тему">
+                    <i data-lucide="moon" class="w-5 h-5 dark:hidden"></i>
+                    <i data-lucide="sun" class="w-5 h-5 hidden dark:block text-amber-400"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notification Toast (Replaces alert) -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-sm w-full px-4 sm:px-0"></div>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 flex flex-col gap-6">
+
+        <!-- Card Selector Bar -->
+        <section aria-label="Выбор темы" class="flex flex-col gap-3">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Выбери карточку темы (1–12)</span>
+                <div class="flex items-center gap-2">
+                    <button id="prevBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:pointer-events-none">
+                        <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                        <span>Назад</span>
+                    </button>
+                    <button id="randomBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 border border-brand-200/70 dark:border-brand-800/60 hover:bg-brand-100 dark:hover:bg-brand-900/60 transition-colors">
+                        <i data-lucide="shuffle" class="w-4 h-4"></i>
+                        <span>Случайная</span>
+                    </button>
+                    <button id="nextBtn" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-medium bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors disabled:opacity-40 disabled:pointer-events-none">
+                        <span>Далее</span>
+                        <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Horizontal Scrollable Card Pills -->
+            <div id="cardPills" class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+                <!-- Populated via JS -->
+            </div>
+        </section>
+
+        <!-- Main Workspace Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+            <!-- Left Column: Topic Card & Sentence Starters (7 cols on lg) -->
+            <div class="lg:col-span-7 flex flex-col gap-6">
+                
+                <!-- Active Topic Card -->
+                <article class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 shadow-sm border border-slate-200/80 dark:border-slate-800 relative overflow-hidden">
+                    <!-- Decorative accent -->
+                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-brand-500 via-violet-500 to-fuchsia-500"></div>
+
+                    <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+                        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-50 dark:bg-brand-950/80 text-brand-700 dark:text-brand-300 text-xs font-bold uppercase tracking-wide">
+                            <span id="cardBadge">Card 1</span>
+                            <span>•</span>
+                            <span id="cardStatusBadge" class="text-slate-500 dark:text-slate-400 font-medium">Не пройдено</span>
+                        </div>
+
+                        <!-- Exam Mode Toggle (Hide/Show Sentence Starters) -->
+                        <button id="toggleStartersBtn" class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-semibold border transition-all bg-amber-50/80 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/60 hover:bg-amber-100 dark:hover:bg-amber-900/50">
+                            <i data-lucide="eye-off" id="starterEyeIcon" class="w-4 h-4"></i>
+                            <span id="starterToggleText">Режим экзамена (скрыть подсказки)</span>
+                        </button>
+                    </div>
+
+                    <!-- Card Title -->
+                    <div class="flex items-center gap-3 mb-6">
+                        <div id="cardIconBox" class="w-12 h-12 rounded-2xl bg-brand-100 dark:bg-brand-900/50 text-brand-600 dark:text-brand-400 flex items-center justify-center shrink-0">
+                            <i data-lucide="sparkles" class="w-6 h-6"></i>
+                        </div>
+                        <h1 id="cardTitle" class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+                            Card 1: Having fun
+                        </h1>
+                    </div>
+
+                    <!-- Questions List -->
+                    <div class="mb-7">
+                        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3 flex items-center gap-1.5">
+                            <i data-lucide="help-circle" class="w-4 h-4 text-brand-500"></i>
+                            <span>Questions (Ответь на все 3 вопроса)</span>
+                        </h2>
+                        <ol id="questionsList" class="space-y-3">
+                            <!-- Populated via JS -->
+                        </ol>
+                    </div>
+
+                    <!-- Sentence Starters Box -->
+                    <div id="startersWrapper" class="transition-all duration-300">
+                        <div class="bg-slate-50 dark:bg-slate-800/60 rounded-2xl p-5 border border-slate-200/70 dark:border-slate-700/70">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                                    <i data-lucide="lightbulb" class="w-4 h-4"></i>
+                                    <span>Sentence Starters (Полезные начала фраз)</span>
+                                </h3>
+                                <span class="text-[11px] text-slate-400">Используй их в ответе</span>
+                            </div>
+                            <ul id="startersList" class="space-y-2.5 text-sm sm:text-base text-slate-700 dark:text-slate-200 font-medium">
+                                <!-- Populated via JS -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- Exam Mode Placeholder when Starters Hidden -->
+                    <div id="examModeNotice" class="hidden bg-amber-50/60 dark:bg-amber-950/30 rounded-2xl p-4 border border-dashed border-amber-300 dark:border-amber-800/70 text-center">
+                        <p class="text-sm text-amber-800 dark:text-amber-300 font-medium flex items-center justify-center gap-2">
+                            <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                            <span>Режим экзамена активен: подсказки скрыты! Попробуй ответить самостоятельно.</span>
+                        </p>
+                    </div>
+                </article>
+
+                <!-- Attempt History for Current Card -->
+                <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-base font-bold flex items-center gap-2">
+                            <i data-lucide="history" class="w-5 h-5 text-brand-500"></i>
+                            <span>История попыток по этой карточке</span>
+                        </h3>
+                        <button id="clearHistoryBtn" class="text-xs text-slate-400 hover:text-rose-500 transition-colors hidden">
+                            Очистить
+                        </button>
+                    </div>
+                    <div id="historyList" class="space-y-3">
+                        <p class="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
+                            Пока нет сохраненных попыток по этой теме. Запиши свой первый ответ!
+                        </p>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Right Column: Recorder, Transcription & AI Feedback (5 cols on lg) -->
+            <div class="lg:col-span-5 flex flex-col gap-6">
+
+                <!-- Recording & Speech Studio -->
+                <section class="bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="text-base font-bold flex items-center gap-2">
+                            <i data-lucide="radio" class="w-5 h-5 text-rose-500"></i>
+                            <span>Студия записи ответа</span>
+                        </h2>
+                        <!-- Timer Badge -->
+                        <div class="flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 font-mono text-sm font-bold" id="timerBadge">
+                            <span id="recDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                            <span id="timerDisplay">00:00</span>
+                            <span class="text-slate-400 font-normal text-xs">/ 02:00</span>
+                        </div>
+                    </div>
+
+                    <!-- Timer Progress Bar -->
+                    <div class="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-5">
+                        <div id="timerProgress" class="h-full bg-rose-500 transition-all duration-300" style="width: 0%"></div>
+                    </div>
+
+                    <!-- Audio Visualizer & Record Trigger -->
+                    <div class="flex flex-col items-center justify-center py-4 px-4 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-slate-700/60 mb-5">
+                        
+                        <!-- Live Waveform Bars -->
+                        <div id="visualizer" class="flex items-center justify-center gap-1 h-10 mb-4" aria-hidden="true">
+                            <div class="viz-bar w-1.5 h-2 bg-brand-400 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-3 bg-brand-500 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-2 bg-violet-500 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-4 bg-brand-500 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-2 bg-fuchsia-500 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-3 bg-brand-500 rounded-full"></div>
+                            <div class="viz-bar w-1.5 h-2 bg-brand-400 rounded-full"></div>
+                        </div>
+
+                        <!-- Record / Stop Button -->
+                        <div class="relative flex items-center justify-center">
+                            <div id="pulseRing" class="hidden absolute inset-0 rounded-full bg-rose-500 animate-pulse-ring"></div>
+                            <button id="recordBtn" class="relative z-10 flex items-center gap-2.5 px-6 py-3.5 rounded-full font-bold text-white bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-lg shadow-brand-500/25 active:scale-95 transition-all">
+                                <i data-lucide="mic" id="recordBtnIcon" class="w-5 h-5"></i>
+                                <span id="recordBtnText">Начать запись ответа</span>
+                            </button>
+                        </div>
+
+                        <p id="speechStatusHint" class="text-xs text-slate-500 dark:text-slate-400 mt-3 text-center">
+                            Говори на английском языке. Речь автоматически переводится в текст.
+                        </p>
+                    </div>
+
+                    <!-- Recorded Audio Playback (Hidden until audio is recorded) -->
+                    <div id="audioPlayerBox" class="hidden mb-5 p-3.5 rounded-2xl bg-brand-50/70 dark:bg-brand-950/40 border border-brand-200/70 dark:border-brand-800/60">
+                        <div class="flex items-center justify-between text-xs font-semibold text-brand-700 dark:text-brand-300 mb-2">
+                            <span class="flex items-center gap-1.5">
+                                <i data-lucide="volume-2" class="w-4 h-4"></i>
+                                <span>Твоя аудиозапись</span>
+                            </span>
+                            <span id="recordedDurationLabel">00:00</span>
+                        </div>
+                        <audio id="audioPlayback" controls class="w-full h-9 rounded-lg"></audio>
+                    </div>
+
+                    <!-- Transcript / Manual Answer Textarea -->
+                    <div class="mb-4">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label for="transcriptInput" class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                <span>Текст ответа (можно править вручную)</span>
+                            </label>
+                            <span id="wordCountBadge" class="text-xs font-semibold text-slate-400">0 слов</span>
+                        </div>
+                        <textarea id="transcriptInput" rows="5" placeholder="Здесь появится расшифровка твоей речи на английском... Или ты можешь напечатать свой ответ вручную, если микрофон недоступен." class="w-full rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 p-3.5 text-sm sm:text-base text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all resize-y"></textarea>
+                    </div>
+
+                    <!-- Action Buttons: Analyze & Reset -->
+                    <div class="flex items-center gap-2.5">
+                        <button id="analyzeBtn" class="flex-1 inline-flex items-center justify-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm sm:text-base text-white bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20 active:scale-[0.99] transition-all">
+                            <i data-lucide="sparkles" class="w-5 h-5"></i>
+                            <span>Проверить и получить фидбэк</span>
+                        </button>
+                        <button id="resetAnswerBtn" class="p-3 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors" title="Очистить ответ">
+                            <i data-lucide="rotate-ccw" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- Feedback Card (Hidden until analyzed) -->
+                <section id="feedbackSection" class="hidden bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-md border-2 border-brand-500/30 dark:border-brand-400/30 animate-fade-in">
+                    <div class="flex items-center justify-between gap-2 mb-4">
+                        <h2 class="text-lg font-extrabold flex items-center gap-2">
+                            <i data-lucide="bot" class="w-6 h-6 text-brand-500"></i>
+                            <span>Анализ твоего ответа</span>
+                        </h2>
+                        <!-- Stars Rating -->
+                        <div id="starRating" class="flex items-center gap-1 text-amber-400" aria-label="Оценка в звездах">
+                            <!-- Filled via JS -->
+                        </div>
+                    </div>
+
+                    <!-- Score Banner -->
+                    <div class="flex items-center justify-between p-4 rounded-2xl bg-gradient-to-r from-brand-50 to-violet-50 dark:from-brand-950/60 dark:to-violet-950/60 border border-brand-100 dark:border-brand-800/60 mb-5">
+                        <div>
+                            <div class="text-xs font-bold uppercase tracking-wider text-brand-600 dark:text-brand-400">Общий балл</div>
+                            <div id="scoreTitle" class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white">Отличный результат!</div>
+                        </div>
+                        <div class="text-right">
+                            <span id="scoreNumber" class="text-3xl font-black text-brand-600 dark:text-brand-400">85</span>
+                            <span class="text-sm font-bold text-slate-400">/100</span>
+                        </div>
+                    </div>
+
+                    <!-- Metrics Grid -->
+                    <div class="grid grid-cols-3 gap-2.5 mb-5 text-center">
+                        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60">
+                            <div class="text-xs text-slate-400 mb-0.5">Слова</div>
+                            <div id="metricWords" class="text-base font-extrabold text-slate-800 dark:text-slate-100">0</div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60">
+                            <div class="text-xs text-slate-400 mb-0.5">Starters</div>
+                            <div id="metricStarters" class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">0/3</div>
+                        </div>
+                        <div class="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/60 dark:border-slate-700/60">
+                            <div class="text-xs text-slate-400 mb-0.5">Связки</div>
+                            <div id="metricConnectors" class="text-base font-extrabold text-violet-600 dark:text-violet-400">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Feedback Items -->
+                    <div class="space-y-3" id="feedbackDetails">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-auto py-6 text-center text-xs text-slate-400 dark:text-slate-600 border-t border-slate-200/60 dark:border-slate-800/60">
+        <p>SpeakUp! Interactive Speaking Trainer • Практикуй английский уверенно каждый день</p>
+    </footer>
+
+    <script>
+        /**
+         * Complete dataset of all 12 Speaking Cards
+         * Strictly following the user's prompts, questions, and sentence starters.
+         */
+        const SPEAKING_CARDS = [
+            {
+                id: 1,
+                title: "Card 1: Having fun",
+                shortTitle: "Having fun",
+                icon: "gamepad-2",
+                questions: [
+                    "What do you like doing in your free time?",
+                    "Do you prefer spending weekends at home or going out with friends? Why?",
+                    "What is your favourite hobby, and how often do you do it?"
+                ],
+                starters: [
+                    "In my free time, I really enjoy...",
+                    "I prefer ... because...",
+                    "My favourite hobby is ..., and I do it..."
+                ],
+                starterPrefixes: ["in my free time", "i really enjoy", "i prefer", "my favourite hobby is", "my favorite hobby is"]
+            },
+            {
+                id: 2,
+                title: "Card 2: Money and how to spend it",
+                shortTitle: "Money & spending",
+                icon: "wallet",
+                questions: [
+                    "What do you usually spend your pocket money on?",
+                    "Do you prefer shopping in real shops or online? Why?",
+                    "Are you good at saving money, or do you spend it quickly?"
+                ],
+                starters: [
+                    "I usually spend my money on...",
+                    "For me, shopping ... is better because...",
+                    "I think I am good at saving money / I usually spend it fast because..."
+                ],
+                starterPrefixes: ["i usually spend my money on", "for me, shopping", "is better because", "good at saving money", "spend it fast because"]
+            },
+            {
+                id: 3,
+                title: "Card 3: Food for life",
+                shortTitle: "Food for life",
+                icon: "utensils",
+                questions: [
+                    "What is your favourite meal, and who cooks it best?",
+                    "Do you like trying new food from different countries?",
+                    "What do you usually eat for breakfast on school days?"
+                ],
+                starters: [
+                    "My favourite dish is ..., and ... makes it best.",
+                    "I love / don't really like trying new food because...",
+                    "On school days, I usually have ... for breakfast."
+                ],
+                starterPrefixes: ["my favourite dish is", "my favorite dish is", "trying new food because", "on school days, i usually have", "for breakfast"]
+            },
+            {
+                id: 4,
+                title: "Card 4: Family ties",
+                shortTitle: "Family ties",
+                icon: "heart-handshake",
+                questions: [
+                    "How many people are there in your family, and who are you closest to?",
+                    "What do you like doing together with your family on holidays?",
+                    "Do you have to do any housework at home? What do you do?"
+                ],
+                starters: [
+                    "There are ... people in my family, and I am closest to...",
+                    "When we are on holiday, we enjoy...",
+                    "At home, I usually have to..."
+                ],
+                starterPrefixes: ["people in my family", "i am closest to", "when we are on holiday", "at home, i usually have to"]
+            },
+            {
+                id: 5,
+                title: "Card 5: It feels like home",
+                shortTitle: "Feels like home",
+                icon: "home",
+                questions: [
+                    "Can you describe your bedroom? What is your favourite thing in it?",
+                    "Do you prefer living in a big city or a small town? Why?",
+                    "What makes a house feel warm and comfortable for you?"
+                ],
+                starters: [
+                    "My bedroom is quite ..., and my favourite thing there is...",
+                    "I would prefer to live in a ... because...",
+                    "For me, a comfortable home is a place where..."
+                ],
+                starterPrefixes: ["my bedroom is quite", "favourite thing there is", "prefer to live in", "comfortable home is a place where"]
+            },
+            {
+                id: 6,
+                title: "Card 6: Best friends",
+                shortTitle: "Best friends",
+                icon: "users",
+                questions: [
+                    "Who is your best friend, and how did you meet?",
+                    "What qualities make someone a really good friend?",
+                    "What do you and your best friend usually talk about?"
+                ],
+                starters: [
+                    "My best friend is ..., and we met...",
+                    "I think a good friend should be ... and...",
+                    "We usually talk about ... and..."
+                ],
+                starterPrefixes: ["my best friend is", "a good friend should be", "we usually talk about"]
+            },
+            {
+                id: 7,
+                title: "Card 7: The easy life",
+                shortTitle: "The easy life",
+                icon: "smartphone",
+                questions: [
+                    "Which gadget or machine in your house couldn't you live without?",
+                    "How often do you use your smartphone, and what do you use it for?",
+                    "Do you think technology makes our lives easier or more difficult?"
+                ],
+                starters: [
+                    "I couldn't live without my ... because...",
+                    "I use my smartphone every day to ... and...",
+                    "In my opinion, technology makes life ... because..."
+                ],
+                starterPrefixes: ["couldn't live without", "could not live without", "use my smartphone", "technology makes life"]
+            },
+            {
+                id: 8,
+                title: "Card 8: Sporting moments",
+                shortTitle: "Sporting moments",
+                icon: "trophy",
+                questions: [
+                    "Do you prefer playing sports or watching them on TV?",
+                    "What is the most popular sport in your country?",
+                    "Have you ever won a prize or a competition in sport?"
+                ],
+                starters: [
+                    "I prefer ... sports because it is...",
+                    "In my country, the most popular sport is...",
+                    "Once, I took part in ... and... / I haven't won any prizes yet, but..."
+                ],
+                starterPrefixes: ["i prefer", "most popular sport is", "took part in", "won any prizes"]
+            },
+            {
+                id: 9,
+                title: "Card 9: The wonders of the world",
+                shortTitle: "Wonders of world",
+                icon: "mountain-snow",
+                questions: [
+                    "What is the most beautiful place in nature you have ever visited?",
+                    "What can teenagers do to help protect the environment?",
+                    "Would you like to visit a desert, a rainforest, or high mountains? Why?"
+                ],
+                starters: [
+                    "The most beautiful place I have ever seen is...",
+                    "To help the planet, teenagers can ... and...",
+                    "I would love to visit ... because..."
+                ],
+                starterPrefixes: ["most beautiful place", "help the planet", "would love to visit"]
+            },
+            {
+                id: 10,
+                title: "Card 10: Around town",
+                shortTitle: "Around town",
+                icon: "map-pin",
+                questions: [
+                    "What are the best places for young people to hang out in your town or city?",
+                    "How do you usually travel around your town (by bus, on foot, by bike)?",
+                    "What is one thing you would like to change about your neighbourhood?"
+                ],
+                starters: [
+                    "Young people in my town usually hang out at...",
+                    "I usually get around by ... because it is...",
+                    "If I could change one thing, I would add / build..."
+                ],
+                starterPrefixes: ["hang out at", "usually get around", "if i could change one thing"]
+            },
+            {
+                id: 11,
+                title: "Card 11: Future bodies",
+                shortTitle: "Future bodies",
+                icon: "heart-pulse",
+                questions: [
+                    "What do you do to stay healthy and keep fit?",
+                    "Do you think you get enough sleep during the school week?",
+                    "How do you think human bodies or medicine will change in 50 years?"
+                ],
+                starters: [
+                    "To stay healthy, I try to ... and...",
+                    "During the week, I usually sleep ... hours, which is / isn't enough.",
+                    "In the future, I think people will ... and medicine will..."
+                ],
+                starterPrefixes: ["to stay healthy", "during the week, i usually sleep", "in the future, i think"]
+            },
+            {
+                id: 12,
+                title: "Card 12: Travellers' tales",
+                shortTitle: "Travellers' tales",
+                icon: "plane",
+                questions: [
+                    "What is the best trip or holiday you have ever had?",
+                    "Which country would you most like to visit in the future and why?",
+                    "What three things do you always pack in your suitcase?"
+                ],
+                starters: [
+                    "My best trip was when I went to ... with...",
+                    "In the future, I dream of visiting ... because...",
+                    "Whenever I travel, I always pack ..., ... and..."
+                ],
+                starterPrefixes: ["my best trip was", "dream of visiting", "whenever i travel"]
+            }
+        ];
+
+        // Linking words & useful vocabulary markers for automated evaluation
+        const LINKING_WORDS = [
+            "because", "however", "actually", "in my opinion", "for example",
+            "for instance", "also", "moreover", "in addition", "besides",
+            "although", "though", "on the other hand", "firstly", "secondly",
+            "finally", "that's why", "so", "therefore", "personally", "to be honest"
+        ];
+
+        // Application State
+        let state = {
+            currentCardIndex: 0,
+            hideStarters: false,
+            isRecording: false,
+            secondsElapsed: 0,
+            maxSeconds: 120, // 2 minutes max
+            recordedAudioUrl: null,
+            finalTranscript: "",
+            interimTranscript: "",
+            history: {} // { cardId: [ { date, score, stars, words, duration, text } ] }
+        };
+
+        // Media & Speech API references
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let audioStream = null;
+        let audioContext = null;
+        let analyser = null;
+        let visualizerFrameId = null;
+        let timerInterval = null;
+        let recognition = null;
+
+        // DOM Elements
+        const els = {
+            themeToggle: document.getElementById('themeToggle'),
+            progressText: document.getElementById('progressText'),
+            progressBar: document.getElementById('progressBar'),
+            cardPills: document.getElementById('cardPills'),
+            prevBtn: document.getElementById('prevBtn'),
+            nextBtn: document.getElementById('nextBtn'),
+            randomBtn: document.getElementById('randomBtn'),
+            cardBadge: document.getElementById('cardBadge'),
+            cardStatusBadge: document.getElementById('cardStatusBadge'),
+            toggleStartersBtn: document.getElementById('toggleStartersBtn'),
+            starterEyeIcon: document.getElementById('starterEyeIcon'),
+            starterToggleText: document.getElementById('starterToggleText'),
+            cardIconBox: document.getElementById('cardIconBox'),
+            cardTitle: document.getElementById('cardTitle'),
+            questionsList: document.getElementById('questionsList'),
+            startersWrapper: document.getElementById('startersWrapper'),
+            startersList: document.getElementById('startersList'),
+            examModeNotice: document.getElementById('examModeNotice'),
+            timerDisplay: document.getElementById('timerDisplay'),
+            timerProgress: document.getElementById('timerProgress'),
+            recDot: document.getElementById('recDot'),
+            visualizer: document.getElementById('visualizer'),
+            pulseRing: document.getElementById('pulseRing'),
+            recordBtn: document.getElementById('recordBtn'),
+            recordBtnIcon: document.getElementById('recordBtnIcon'),
+            recordBtnText: document.getElementById('recordBtnText'),
+            speechStatusHint: document.getElementById('speechStatusHint'),
+            audioPlayerBox: document.getElementById('audioPlayerBox'),
+            audioPlayback: document.getElementById('audioPlayback'),
+            recordedDurationLabel: document.getElementById('recordedDurationLabel'),
+            transcriptInput: document.getElementById('transcriptInput'),
+            wordCountBadge: document.getElementById('wordCountBadge'),
+            analyzeBtn: document.getElementById('analyzeBtn'),
+            resetAnswerBtn: document.getElementById('resetAnswerBtn'),
+            feedbackSection: document.getElementById('feedbackSection'),
+            starRating: document.getElementById('starRating'),
+            scoreTitle: document.getElementById('scoreTitle'),
+            scoreNumber: document.getElementById('scoreNumber'),
+            metricWords: document.getElementById('metricWords'),
+            metricStarters: document.getElementById('metricStarters'),
+            metricConnectors: document.getElementById('metricConnectors'),
+            feedbackDetails: document.getElementById('feedbackDetails'),
+            historyList: document.getElementById('historyList'),
+            clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+            toastContainer: document.getElementById('toastContainer')
+        };
+
+        /**
+         * Initialize Application on Window Load
+         */
+        window.addEventListener('DOMContentLoaded', () => {
+            loadLocalStorage();
+            initTheme();
+            initSpeechRecognition();
+            renderCardPills();
+            renderCurrentCard();
+            updateOverallProgress();
+            bindEvents();
+            lucide.createIcons();
+        });
+
+        /**
+         * Theme Management (Light / Dark Mode)
+         */
+        function initTheme() {
+            const savedTheme = localStorage.getItem('speakup_theme');
+            if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('speakup_theme', isDark ? 'dark' : 'light');
+        }
+
+        /**
+         * LocalStorage Persistence
+         */
+        function loadLocalStorage() {
+            try {
+                const savedHistory = localStorage.getItem('speakup_history');
+                if (savedHistory) {
+                    state.history = JSON.parse(savedHistory);
+                }
+            } catch (e) {
+                console.warn('Could not load history from localStorage', e);
+            }
+        }
+
+        function saveHistory() {
+            try {
+                localStorage.setItem('speakup_history', JSON.stringify(state.history));
+            } catch (e) {
+                console.warn('Could not save history to localStorage', e);
+            }
+        }
+
+        /**
+         * Custom Toast Notification System (Replaces alert)
+         */
+        function showToast(message, type = 'info') {
+            const toast = document.createElement('div');
+            const colors = {
+                info: 'bg-slate-900 dark:bg-slate-800 text-white border-slate-700',
+                success: 'bg-emerald-600 text-white border-emerald-500',
+                warning: 'bg-amber-600 text-white border-amber-500',
+                error: 'bg-rose-600 text-white border-rose-500'
+            };
+            toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg border text-sm font-medium animate-fade-in ${colors[type] || colors.info}`;
+            toast.innerHTML = `<span>${message}</span>`;
+            els.toastContainer.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(8px)';
+                toast.style.transition = 'all 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        /**
+         * Render Horizontal Card Navigation Pills
+         */
+        function renderCardPills() {
+            els.cardPills.innerHTML = '';
+            SPEAKING_CARDS.forEach((card, idx) => {
+                const isActive = idx === state.currentCardIndex;
+                const isCompleted = state.history[card.id] && state.history[card.id].length > 0;
+
+                const btn = document.createElement('button');
+                btn.className = `shrink-0 inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl text-xs sm:text-sm font-semibold border transition-all ${
+                    isActive
+                        ? 'bg-brand-600 text-white border-brand-600 shadow-md shadow-brand-500/20'
+                        : isCompleted
+                            ? 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/60 hover:bg-emerald-100'
+                            : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`;
+                btn.innerHTML = `
+                    <span>#${card.id}</span>
+                    <span>${card.shortTitle}</span>
+                    ${isCompleted ? `<i data-lucide="check-circle-2" class="w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-emerald-500'}"></i>` : ''}
+                `;
+                btn.addEventListener('click', () => switchCard(idx));
+                els.cardPills.appendChild(btn);
+            });
+            lucide.createIcons();
+        }
+
+        /**
+         * Switch to a Specific Card Index
+         */
+        function switchCard(newIndex) {
+            if (state.isRecording) {
+                stopRecording();
+            }
+            state.currentCardIndex = newIndex;
+            resetCurrentWorkspace(false);
+            renderCardPills();
+            renderCurrentCard();
+
+            // Scroll active pill into view
+            const activePill = els.cardPills.children[newIndex];
+            if (activePill) {
+                activePill.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+            }
+        }
+
+        /**
+         * Render Current Card Details (Questions, Sentence Starters, History)
+         */
+        function renderCurrentCard() {
+            const card = SPEAKING_CARDS[state.currentCardIndex];
+            const cardAttempts = state.history[card.id] || [];
+
+            // Navigation button states
+            els.prevBtn.disabled = state.currentCardIndex === 0;
+            els.nextBtn.disabled = state.currentCardIndex === SPEAKING_CARDS.length - 1;
+
+            // Header badges
+            els.cardBadge.textContent = `Card ${card.id} из ${SPEAKING_CARDS.length}`;
+            if (cardAttempts.length > 0) {
+                const bestScore = Math.max(...cardAttempts.map(a => a.score));
+                els.cardStatusBadge.textContent = `Пройдено (Лучший балл: ${bestScore}/100)`;
+                els.cardStatusBadge.className = "text-emerald-600 dark:text-emerald-400 font-semibold";
+            } else {
+                els.cardStatusBadge.textContent = "Не пройдено";
+                els.cardStatusBadge.className = "text-slate-400 dark:text-slate-500 font-medium";
+            }
+
+            // Icon & Title
+            els.cardIconBox.innerHTML = `<i data-lucide="${card.icon}" class="w-6 h-6"></i>`;
+            els.cardTitle.textContent = card.title;
+
+            // Questions
+            els.questionsList.innerHTML = card.questions.map((q, i) => `
+                <li class="flex items-start gap-3 p-3.5 rounded-2xl bg-slate-50/90 dark:bg-slate-800/50 border border-slate-200/50 dark:border-slate-700/50">
+                    <span class="w-6 h-6 rounded-full bg-brand-600 text-white text-xs font-bold flex items-center justify-center shrink-0 mt-0.5">${i + 1}</span>
+                    <span class="text-sm sm:text-base font-medium text-slate-800 dark:text-slate-100 leading-relaxed">${q}</span>
+                </li>
+            `).join('');
+
+            // Sentence Starters
+            els.startersList.innerHTML = card.starters.map(s => `
+                <li class="flex items-start gap-2.5">
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-emerald-500 shrink-0 mt-1"></i>
+                    <span>${s}</span>
+                </li>
+            `).join('');
+
+            updateStartersVisibility();
+            renderCardHistory(card.id);
+            lucide.createIcons();
+        }
+
+        /**
+         * Toggle Exam Mode (Hide/Show Sentence Starters)
+         */
+        function updateStartersVisibility() {
+            if (state.hideStarters) {
+                els.startersWrapper.classList.add('hidden');
+                els.examModeNotice.classList.remove('hidden');
+                els.starterToggleText.textContent = 'Показать подсказки';
+                els.starterEyeIcon.setAttribute('data-lucide', 'eye');
+            } else {
+                els.startersWrapper.classList.remove('hidden');
+                els.examModeNotice.classList.add('hidden');
+                els.starterToggleText.textContent = 'Режим экзамена (скрыть подсказки)';
+                els.starterEyeIcon.setAttribute('data-lucide', 'eye-off');
+            }
+            lucide.createIcons();
+        }
+
+        /**
+         * Initialize Web Speech API (SpeechRecognition)
+         */
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognition) {
+                els.speechStatusHint.textContent = 'Распознавание речи не поддерживается в этом браузере. Запись аудио доступна, текст можно ввести вручную.';
+                return;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.lang = 'en-US';
+            recognition.continuous = true;
+            recognition.interimResults = true;
+
+            recognition.onresult = (event) => {
+                let interim = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    const transcriptPart = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        state.finalTranscript += (state.finalTranscript ? ' ' : '') + transcriptPart.trim();
+                    } else {
+                        interim += transcriptPart;
+                    }
+                }
+                const combined = (state.finalTranscript + (interim ? ' ' + interim : '')).trim();
+                els.transcriptInput.value = combined;
+                updateWordCount();
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech') return;
+                console.warn('SpeechRecognition error:', event.error);
+                if (event.error === 'not-allowed') {
+                    showToast('Доступ к микрофону запрещен. Разреши доступ или введи ответ текстом.', 'warning');
+                }
+            };
+
+            recognition.onend = () => {
+                // Auto-restart recognition if still recording
+                if (state.isRecording) {
+                    try {
+                        recognition.start();
+                    } catch (e) {
+                        // Ignore already started error
+                    }
+                }
+            };
+        }
+
+        /**
+         * Start Audio Recording & Live Transcription
+         */
+        async function startRecording() {
+            try {
+                audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch (err) {
+                showToast('Не удалось получить доступ к микрофону. Ты можешь напечатать ответ в поле ниже!', 'warning');
+                return;
+            }
+
+            // Reset previous recording state
+            audioChunks = [];
+            state.secondsElapsed = 0;
+            state.finalTranscript = els.transcriptInput.value.trim();
+            els.audioPlayerBox.classList.add('hidden');
+            els.feedbackSection.classList.add('hidden');
+
+            // Setup MediaRecorder
+            try {
+                mediaRecorder = new MediaRecorder(audioStream);
+            } catch (e) {
+                showToast('Ошибка инициализации записи аудио в браузере.', 'error');
+                return;
+            }
+
+            mediaRecorder.ondataavailable = (event) => {
+                if (event.data.size > 0) {
+                    audioChunks.push(event.data);
+                }
+            };
+
+            mediaRecorder.onstop = () => {
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                if (state.recordedAudioUrl) {
+                    URL.revokeObjectURL(state.recordedAudioUrl);
+                }
+                state.recordedAudioUrl = URL.createObjectURL(audioBlob);
+                els.audioPlayback.src = state.recordedAudioUrl;
+                els.recordedDurationLabel.textContent = formatTime(state.secondsElapsed);
+                els.audioPlayerBox.classList.remove('hidden');
+            };
+
+            // Setup Web Audio API Visualizer
+            setupAudioVisualizer(audioStream);
+
+            // Start Recording & Speech Recognition
+            mediaRecorder.start();
+            state.isRecording = true;
+
+            if (recognition) {
+                try {
+                    recognition.start();
+                } catch (e) {
+                    console.warn(e);
+                }
+            }
+
+            // Update UI to Recording State
+            updateRecordingUI(true);
+
+            // Start Timer (max 2 minutes)
+            timerInterval = setInterval(() => {
+                state.secondsElapsed++;
+                updateTimerUI();
+
+                if (state.secondsElapsed >= state.maxSeconds) {
+                    showToast('Достигнут лимит времени записи (2 минуты).', 'info');
+                    stopRecording();
+                }
+            }, 1000);
+        }
+
+        /**
+         * Stop Audio Recording & Transcription
+         */
+        function stopRecording() {
+            state.isRecording = false;
+            clearInterval(timerInterval);
+
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+            }
+
+            if (recognition) {
+                try {
+                    recognition.stop();
+                } catch (e) {}
+            }
+
+            if (audioStream) {
+                audioStream.getTracks().forEach(track => track.stop());
+            }
+
+            if (visualizerFrameId) {
+                cancelAnimationFrame(visualizerFrameId);
+            }
+            if (audioContext && audioContext.state !== 'closed') {
+                audioContext.close().catch(() => {});
+            }
+
+            resetVisualizerBars();
+            updateRecordingUI(false);
+            showToast('Запись завершена! Нажми «Проверить и получить фидбэк».', 'success');
+        }
+
+        /**
+         * Live Audio Volume Visualizer using Web Audio API
+         */
+        function setupAudioVisualizer(stream) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 32;
+                source.connect(analyser);
+
+                const bufferLength = analyser.frequencyBinCount;
+                const dataArray = new Uint8Array(bufferLength);
+                const bars = els.visualizer.querySelectorAll('.viz-bar');
+
+                function animateBars() {
+                    if (!state.isRecording) return;
+                    analyser.getByteFrequencyData(dataArray);
+
+                    bars.forEach((bar, index) => {
+                        const val = dataArray[index % bufferLength] || 0;
+                        const height = Math.max(8, Math.min(38, (val / 255) * 40));
+                        bar.style.height = `${height}px`;
+                    });
+
+                    visualizerFrameId = requestAnimationFrame(animateBars);
+                }
+                animateBars();
+            } catch (e) {
+                console.warn('Visualizer unavailable', e);
+            }
+        }
+
+        function resetVisualizerBars() {
+            const bars = els.visualizer.querySelectorAll('.viz-bar');
+            bars.forEach(bar => bar.style.height = '8px');
+        }
+
+        /**
+         * Update UI Elements for Recording / Idle State
+         */
+        function updateRecordingUI(recording) {
+            if (recording) {
+                els.recordBtn.className = 'relative z-10 flex items-center gap-2.5 px-6 py-3.5 rounded-full font-bold text-white bg-rose-600 hover:bg-rose-700 shadow-lg shadow-rose-500/30 active:scale-95 transition-all';
+                els.recordBtnIcon.setAttribute('data-lucide', 'square');
+                els.recordBtnText.textContent = 'Остановить запись';
+                els.pulseRing.classList.remove('hidden');
+                els.recDot.className = 'w-2 h-2 rounded-full bg-rose-500 animate-ping';
+                els.speechStatusHint.textContent = 'Идет запись... Отвечай на все 3 вопроса карточки!';
+            } else {
+                els.recordBtn.className = 'relative z-10 flex items-center gap-2.5 px-6 py-3.5 rounded-full font-bold text-white bg-gradient-to-r from-brand-600 to-violet-600 hover:from-brand-700 hover:to-violet-700 shadow-lg shadow-brand-500/25 active:scale-95 transition-all';
+                els.recordBtnIcon.setAttribute('data-lucide', 'mic');
+                els.recordBtnText.textContent = 'Записать заново';
+                els.pulseRing.classList.add('hidden');
+                els.recDot.className = 'w-2 h-2 rounded-full bg-slate-400';
+                els.speechStatusHint.textContent = 'Говори на английском языке. Речь автоматически переводится в текст.';
+            }
+            lucide.createIcons();
+        }
+
+        function updateTimerUI() {
+            els.timerDisplay.textContent = formatTime(state.secondsElapsed);
+            const pct = Math.min(100, (state.secondsElapsed / state.maxSeconds) * 100);
+            els.timerProgress.style.width = `${pct}%`;
+        }
+
+        function formatTime(totalSeconds) {
+            const mins = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+            const secs = (totalSeconds % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function updateWordCount() {
+            const text = els.transcriptInput.value.trim();
+            const words = text ? text.split(/\s+/).filter(w => w.length > 0) : [];
+            els.wordCountBadge.textContent = `${words.length} ${getRussianWordForm(words.length, ['слово', 'слова', 'слов'])}`;
+            return words;
+        }
+
+        function getRussianWordForm(n, forms) {
+            const n100 = Math.abs(n) % 100;
+            const n10 = n100 % 10;
+            if (n100 > 10 && n100 < 20) return forms[2];
+            if (n10 > 1 && n10 < 5) return forms[1];
+            if (n10 === 1) return forms[0];
+            return forms[2];
+        }
+
+        /**
+         * Intelligent Client-Side Feedback Engine
+         */
+        function analyzeResponse() {
+            if (state.isRecording) {
+                stopRecording();
+            }
+
+            const rawText = els.transcriptInput.value.trim();
+            if (!rawText) {
+                showToast('Сначала запиши голосовой ответ или введи текст ответа на английском!', 'warning');
+                els.transcriptInput.focus();
+                return;
+            }
+
+            const card = SPEAKING_CARDS[state.currentCardIndex];
+            const lowerText = rawText.toLowerCase();
+            const words = rawText.split(/\s+/).filter(w => w.replace(/[^a-zA-Z']/g, '').length > 0);
+            const wordCount = words.length;
+
+            // Unique vocabulary diversity
+            const cleanWords = words.map(w => w.toLowerCase().replace(/[^a-z']/g, '')).filter(Boolean);
+            const uniqueWords = new Set(cleanWords);
+            const lexicalDiversity = wordCount > 0 ? (uniqueWords.size / wordCount) : 0;
+
+            // Check Sentence Starters usage
+            let matchedStartersCount = 0;
+            card.starterPrefixes.forEach(prefix => {
+                if (lowerText.includes(prefix)) {
+                    matchedStartersCount++;
+                }
+            });
+            // Normalize to max 3 starters
+            const startersUsed = Math.min(3, matchedStartersCount);
+
+            // Check Linking Words usage
+            const usedConnectors = LINKING_WORDS.filter(conn => {
+                const regex = new RegExp(`\\b${conn}\\b`, 'i');
+                return regex.test(lowerText);
+            });
+
+            // Check sentence count / structure
+            const sentences = rawText.split(/[.!?]+/).filter(s => s.trim().length > 2);
+
+            // Calculate Score (0 - 100)
+            let score = 0;
+
+            // 1. Length & Completeness (up to 45 pts)
+            if (wordCount >= 45) score += 45;
+            else if (wordCount >= 30) score += 36;
+            else if (wordCount >= 18) score += 25;
+            else if (wordCount >= 8) score += 15;
+            else score += 8;
+
+            // 2. Sentence Starters / Answering all 3 questions (up to 25 pts)
+            score += startersUsed * 8;
+            if (startersUsed === 3) score += 1; // bonus 25 total
+
+            // 3. Linking words & Grammar markers (up to 20 pts)
+            score += Math.min(20, usedConnectors.length * 7);
+
+            // 4. Lexical Diversity & Duration bonus (up to 10 pts)
+            if (lexicalDiversity > 0.65 && wordCount >= 15) score += 6;
+            else if (wordCount >= 10) score += 3;
+
+            if (state.secondsElapsed >= 20) score += 4;
+            else if (state.secondsElapsed >= 10) score += 2;
+
+            score = Math.min(100, Math.max(10, score));
+
+            // Calculate Stars (1 to 5)
+            let stars = 1;
+            if (score >= 85) stars = 5;
+            else if (score >= 70) stars = 4;
+            else if (score >= 50) stars = 3;
+            else if (score >= 30) stars = 2;
+
+            // Generate Personalized Friendly Advice
+            const feedbackItems = [];
+
+            // Completeness Feedback
+            if (wordCount >= 40) {
+                feedbackItems.push({
+                    type: 'good',
+                    title: 'Отличный объем ответа!',
+                    desc: `Ты сказал(а) ${wordCount} слов — это развернутый и уверенный ответ, который хорошо раскрывает тему.`
+                });
+            } else if (wordCount >= 20) {
+                feedbackItems.push({
+                    type: 'tip',
+                    title: 'Хорошее начало, можно чуть подробнее',
+                    desc: `В твоем ответе ${wordCount} слов. На экзамене старайся говорить 40–60 слов (около 30–45 секунд), добавляя по 2–3 предложения на каждый вопрос.`
+                });
+            } else {
+                feedbackItems.push({
+                    type: 'warn',
+                    title: 'Ответ пока слишком короткий',
+                    desc: `Всего ${wordCount} слов. Постарайся ответить на все 3 вопроса карточки полными предложениями, а не одним-двумя словами.`
+                });
+            }
+
+            // Starters Feedback
+            if (startersUsed >= 2) {
+                feedbackItems.push({
+                    type: 'good',
+                    title: `Использованы Sentence Starters (${startersUsed}/3)`,
+                    desc: 'Здорово! Ты опираешься на предложенные конструкции — это делает речь естественной и структурированной.'
+                });
+            } else {
+                feedbackItems.push({
+                    type: 'tip',
+                    title: 'Используй подсказки Sentence Starters',
+                    desc: `Попробуй начать фразы с шаблонов из карточки (например: "${card.starters[0]}"), чтобы легко связывать мысли.`
+                });
+            }
+
+            // Linking Words Feedback
+            if (usedConnectors.length > 0) {
+                const listStr = usedConnectors.slice(0, 4).map(w => `"${w}"`).join(', ');
+                feedbackItems.push({
+                    type: 'good',
+                    title: 'Отличные слова-связки!',
+                    desc: `В твоей речи замечены связки: ${listStr}. Они делают английский более связным и продвинутым.`
+                });
+            } else {
+                feedbackItems.push({
+                    type: 'tip',
+                    title: 'Добавь слова-связки (Linking words)',
+                    desc: 'Совет: используй слова "because" (потому что), "for example" (например), "in my opinion" (по моему мнению) или "also" (также), чтобы объяснять свои идеи.'
+                });
+            }
+
+            // Question 2 "Why?" check
+            if (!lowerText.includes('because') && !lowerText.includes('since') && !lowerText.includes('as ')) {
+                feedbackItems.push({
+                    type: 'tip',
+                    title: 'Не забывай объяснять «Почему?»',
+                    desc: 'Во многих вопросах есть слово "Why?". Обязательно добавляй причину с помощью слова "because...".'
+                });
+            }
+
+            // Render Feedback UI
+            renderFeedbackUI({
+                score,
+                stars,
+                wordCount,
+                startersUsed,
+                connectorsCount: usedConnectors.length,
+                feedbackItems
+            });
+
+            // Save attempt to History
+            saveAttemptToHistory(card.id, {
+                date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                score,
+                stars,
+                words: wordCount,
+                duration: state.secondsElapsed,
+                text: rawText
+            });
+        }
+
+        /**
+         * Render Feedback Section in DOM
+         */
+        function renderFeedbackUI(result) {
+            els.feedbackSection.classList.remove('hidden');
+
+            // Stars
+            let starsHtml = '';
+            for (let i = 1; i <= 5; i++) {
+                if (i <= result.stars) {
+                    starsHtml += `<i data-lucide="star" class="w-5 h-5 fill-amber-400 text-amber-400"></i>`;
+                } else {
+                    starsHtml += `<i data-lucide="star" class="w-5 h-5 text-slate-300 dark:text-slate-700"></i>`;
+                }
+            }
+            els.starRating.innerHTML = starsHtml;
+
+            // Score Title & Number
+            const titles = {
+                5: 'Блестящий ответ! 🌟',
+                4: 'Отличная работа! 👏',
+                3: 'Хороший результат! 👍',
+                2: 'Неплохо, но нужно больше деталей 💪',
+                1: 'Хорошая разминка! Попробуй еще раз 🚀'
+            };
+            els.scoreTitle.textContent = titles[result.stars];
+            els.scoreNumber.textContent = result.score;
+
+            // Metrics
+            els.metricWords.textContent = result.wordCount;
+            els.metricStarters.textContent = `${result.startersUsed}/3`;
+            els.metricConnectors.textContent = result.connectorsCount;
+
+            // Feedback Items
+            els.feedbackDetails.innerHTML = result.feedbackItems.map(item => {
+                const styles = {
+                    good: {
+                        bg: 'bg-emerald-50/80 dark:bg-emerald-950/30 border-emerald-200/70 dark:border-emerald-800/60',
+                        icon: 'check-circle-2',
+                        iconColor: 'text-emerald-600 dark:text-emerald-400'
+                    },
+                    tip: {
+                        bg: 'bg-brand-50/80 dark:bg-brand-950/30 border-brand-200/70 dark:border-brand-800/60',
+                        icon: 'sparkles',
+                        iconColor: 'text-brand-600 dark:text-brand-400'
+                    },
+                    warn: {
+                        bg: 'bg-amber-50/80 dark:bg-amber-950/30 border-amber-200/70 dark:border-amber-800/60',
+                        icon: 'alert-circle',
+                        iconColor: 'text-amber-600 dark:text-amber-400'
+                    }
+                }[item.type];
+
+                return `
+                    <div class="p-3.5 rounded-2xl border ${styles.bg} flex items-start gap-3">
+                        <i data-lucide="${styles.icon}" class="w-5 h-5 ${styles.iconColor} shrink-0 mt-0.5"></i>
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-900 dark:text-white">${item.title}</h4>
+                            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">${item.desc}</p>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+            els.feedbackSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        /**
+         * History Management per Card
+         */
+        function saveAttemptToHistory(cardId, attempt) {
+            if (!state.history[cardId]) {
+                state.history[cardId] = [];
+            }
+            state.history[cardId].unshift(attempt);
+            // Keep last 5 attempts per card
+            if (state.history[cardId].length > 5) {
+                state.history[cardId] = state.history[cardId].slice(0, 5);
+            }
+            saveHistory();
+            renderCardHistory(cardId);
+            renderCardPills();
+            renderCurrentCard();
+            updateOverallProgress();
+        }
+
+        function renderCardHistory(cardId) {
+            const attempts = state.history[cardId] || [];
+            if (attempts.length === 0) {
+                els.clearHistoryBtn.classList.add('hidden');
+                els.historyList.innerHTML = `
+                    <p class="text-sm text-slate-400 dark:text-slate-500 text-center py-4">
+                        Пока нет сохраненных попыток по этой теме. Запиши свой первый ответ!
+                    </p>
+                `;
+                return;
+            }
+
+            els.clearHistoryBtn.classList.remove('hidden');
+            els.historyList.innerHTML = attempts.map((att, idx) => `
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/70 dark:border-slate-700/70 flex flex-col gap-2">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold px-2 py-0.5 rounded-md bg-brand-100 dark:bg-brand-900/60 text-brand-700 dark:text-brand-300">Попытка #${attempts.length - idx}</span>
+                            <span class="text-xs text-slate-400">${att.date}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-semibold text-slate-500">${att.words} сл.</span>
+                            <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300">${att.score}/100</span>
+                        </div>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 italic line-clamp-2">"${att.text}"</p>
+                </div>
+            `).join('');
+        }
+
+        function updateOverallProgress() {
+            const completedCount = SPEAKING_CARDS.filter(c => state.history[c.id] && state.history[c.id].length > 0).length;
+            els.progressText.textContent = `${completedCount} / ${SPEAKING_CARDS.length}`;
+            const pct = (completedCount / SPEAKING_CARDS.length) * 100;
+            els.progressBar.style.width = `${pct}%`;
+        }
+
+        /**
+         * Reset Workspace for Current Card
+         */
+        function resetCurrentWorkspace(notify = true) {
+            if (state.isRecording) {
+                stopRecording();
+            }
+            state.secondsElapsed = 0;
+            state.finalTranscript = '';
+            els.transcriptInput.value = '';
+            els.timerDisplay.textContent = '00:00';
+            els.timerProgress.style.width = '0%';
+            els.audioPlayerBox.classList.add('hidden');
+            els.feedbackSection.classList.add('hidden');
+            els.recordBtnText.textContent = 'Начать запись ответа';
+            updateWordCount();
+
+            if (notify) {
+                showToast('Поле ответа очищено.', 'info');
+            }
+        }
+
+        /**
+         * Bind All Interactive Event Listeners
+         */
+        function bindEvents() {
+            els.themeToggle.addEventListener('click', toggleTheme);
+
+            els.prevBtn.addEventListener('click', () => {
+                if (state.currentCardIndex > 0) switchCard(state.currentCardIndex - 1);
+            });
+
+            els.nextBtn.addEventListener('click', () => {
+                if (state.currentCardIndex < SPEAKING_CARDS.length - 1) switchCard(state.currentCardIndex + 1);
+            });
+
+            els.randomBtn.addEventListener('click', () => {
+                let randomIndex = Math.floor(Math.random() * SPEAKING_CARDS.length);
+                if (randomIndex === state.currentCardIndex && SPEAKING_CARDS.length > 1) {
+                    randomIndex = (randomIndex + 1) % SPEAKING_CARDS.length;
+                }
+                switchCard(randomIndex);
+                showToast(`Выбрана случайная тема: ${SPEAKING_CARDS[randomIndex].shortTitle}`, 'info');
+            });
+
+            els.toggleStartersBtn.addEventListener('click', () => {
+                state.hideStarters = !state.hideStarters;
+                updateStartersVisibility();
+            });
+
+            els.recordBtn.addEventListener('click', () => {
+                if (state.isRecording) {
+                    stopRecording();
+                } else {
+                    startRecording();
+                }
+            });
+
+            els.transcriptInput.addEventListener('input', () => {
+                state.finalTranscript = els.transcriptInput.value;
+                updateWordCount();
+            });
+
+            els.analyzeBtn.addEventListener('click', analyzeResponse);
+
+            els.resetAnswerBtn.addEventListener('click', () => resetCurrentWorkspace(true));
+
+            els.clearHistoryBtn.addEventListener('click', () => {
+                const card = SPEAKING_CARDS[state.currentCardIndex];
+                delete state.history[card.id];
+                saveHistory();
+                renderCardHistory(card.id);
+                renderCardPills();
+                renderCurrentCard();
+                updateOverallProgress();
+                showToast('История попыток по этой карточке очищена.', 'info');
+            });
+        }
+    </script>
+</body>
+</html>
